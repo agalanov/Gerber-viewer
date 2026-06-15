@@ -4,7 +4,7 @@
  * Инициализирует приложение:
  * 1. Создаёт Uploader (Drag & Drop загрузка ZIP)
  * 2. После загрузки файлов — создаёт Mapper (таблица маппинга)
- * 3. После применения маппинга — инициализирует Viewer, Summary и Export
+ * 3. После применения маппинга — инициализирует Viewer, Summary, Export и Bridge
  */
 
 import './styles/main.css';
@@ -14,6 +14,7 @@ import { Mapper } from './components/Mapper';
 import { Viewer } from './components/Viewer';
 import { Summary } from './components/Summary';
 import { Export } from './components/Export';
+import { Bridge } from './components/Bridge';
 
 /** Текущая конфигурация вьювера */
 let config: ViewerConfig = {
@@ -29,6 +30,7 @@ let mapper: Mapper | null = null;
 let viewer: Viewer | null = null;
 let summary: Summary | null = null;
 let exportComp: Export | null = null;
+let bridge: Bridge | null = null;
 
 /** DOM-элементы */
 let uploaderContainer: HTMLElement | null = null;
@@ -36,6 +38,10 @@ let mapperContainer: HTMLElement | null = null;
 let viewerContainer: HTMLElement | null = null;
 let summaryContainer: HTMLElement | null = null;
 let exportContainer: HTMLElement | null = null;
+let bridgeContainer: HTMLElement | null = null;
+
+/** Хранилище оригинального zip-файла для Bridge */
+let currentZipFile: File | null = null;
 
 /**
  * Инициализация приложения
@@ -68,6 +74,7 @@ async function initApp(): Promise<void> {
           <div id="mapperContainer" style="display:none"></div>
           <div id="summaryContainer" style="display:none"></div>
           <div id="exportContainer" style="display:none"></div>
+          <div id="bridgeContainer" style="display:none"></div>
         </div>
         <div class="app-main" id="mainArea">
           <div id="viewerPlaceholder" class="app-loading">
@@ -83,9 +90,10 @@ async function initApp(): Promise<void> {
   mapperContainer = document.getElementById('mapperContainer');
   summaryContainer = document.getElementById('summaryContainer');
   exportContainer = document.getElementById('exportContainer');
+  bridgeContainer = document.getElementById('bridgeContainer');
   viewerContainer = document.getElementById('viewerContainer');
 
-  if (!uploaderContainer || !mapperContainer || !viewerContainer || !summaryContainer || !exportContainer) {
+  if (!uploaderContainer || !mapperContainer || !viewerContainer || !summaryContainer || !exportContainer || !bridgeContainer) {
     console.error('[GerberViewer] Required DOM elements not found');
     return;
   }
@@ -101,12 +109,17 @@ async function initApp(): Promise<void> {
 }
 
 /**
- * Колбэк: файлы загружены — передаём в Mapper, сохраняем буфер ZIP
+ * Колбэк: файлы загружены — передаём в Mapper, сохраняем буфер ZIP и оригинальный File
  */
-function onFilesLoaded(files: GerberFile[], zipBuffer: ArrayBuffer): void {
+function onFilesLoaded(files: GerberFile[], zipBuffer: ArrayBuffer, zipFile?: File): void {
   console.log(`[GerberViewer] Loaded ${files.length} files`);
 
   if (!mapperContainer || !viewerContainer) return;
+
+  // Сохраняем оригинальный zip-файл для Bridge
+  if (zipFile) {
+    currentZipFile = zipFile;
+  }
 
   // Показываем контейнер маппера, скрываем заглушку
   mapperContainer.style.display = '';
@@ -126,12 +139,12 @@ function onFilesLoaded(files: GerberFile[], zipBuffer: ArrayBuffer): void {
 }
 
 /**
- * Колбэк: маппинг применён — инициализируем Viewer, Summary, Export
+ * Колбэк: маппинг применён — инициализируем Viewer, Summary, Export, Bridge
  */
 async function onApplyMapping(mapping: LayerMapping[], zipBuffer: ArrayBuffer): Promise<void> {
   console.log(`[GerberViewer] Mapping applied: ${mapping.length} layers`);
 
-  if (!viewerContainer || !summaryContainer || !exportContainer) return;
+  if (!viewerContainer || !summaryContainer || !exportContainer || !bridgeContainer) return;
 
   // Показываем контейнер вьювера
   viewerContainer.style.display = '';
@@ -149,24 +162,38 @@ async function onApplyMapping(mapping: LayerMapping[], zipBuffer: ArrayBuffer): 
     // Инициализация вьювера
     const metrics = await viewer.init(mapping, zipBuffer);
 
-    // Показываем Summary
+    // --- Summary ---
+    summaryContainer.style.display = '';
     if (!summary) {
       summary = new Summary(summaryContainer);
     }
-    summaryContainer.style.display = '';
-    summary.render(metrics);
+    summary.render();
+    summary.setMetrics(metrics);
 
-    // Показываем Export
+    // --- Export ---
+    exportContainer.style.display = '';
     if (!exportComp) {
       exportComp = new Export(exportContainer);
     }
-    exportContainer.style.display = '';
-    exportComp.render(() => {
-      const canvas = viewer?.getCanvas();
-      if (canvas) {
-        Export.exportToPng(canvas, 'gerber-export.png');
-      }
-    });
+    exportComp.render();
+
+    // Передаём canvas из Viewer в Export
+    const canvas = viewer.getCanvas();
+    if (canvas) {
+      exportComp.setCanvas(canvas);
+    }
+
+    // --- Bridge ---
+    bridgeContainer.style.display = '';
+    if (!bridge) {
+      bridge = new Bridge(bridgeContainer);
+    }
+    bridge.render();
+    bridge.setViewer(() => viewer!.getMetrics());
+    if (currentZipFile) {
+      bridge.setZipFile(currentZipFile);
+    }
+    bridge.enable();
 
     // Уведомляем родительское окно о метриках
     notifyParent({
@@ -204,7 +231,7 @@ function notifyParent(payload: PostMessagePayload): void {
 }
 
 // Экспорт для отладки из консоли
-export { config, initApp, notifyParent, uploader, mapper, viewer, summary, exportComp };
+export { config, initApp, notifyParent, uploader, mapper, viewer, summary, exportComp, bridge };
 
 // Запуск приложения
 document.addEventListener('DOMContentLoaded', () => {

@@ -9,7 +9,7 @@
 import type { GerberFile } from '../types';
 import { autoMapFiles } from '../utils/mapping';
 
-export type FilesLoadedCallback = (files: GerberFile[], zipBuffer: ArrayBuffer) => void;
+export type FilesLoadedCallback = (files: GerberFile[], zipBuffer: ArrayBuffer, zipFile?: File) => void;
 
 export class Uploader {
   private container: HTMLElement;
@@ -129,6 +129,9 @@ export class Uploader {
       return;
     }
 
+    // Сохраняем оригинальный File для Bridge
+    this._originalFile = file;
+
     // Показываем прогресс
     this.showProgress('Распаковка...', 0);
 
@@ -184,9 +187,10 @@ export class Uploader {
           this.hideProgress();
           this.worker?.terminate();
           this.worker = null;
-          // Передаём файлы и буфер
-          this.onFilesLoaded(mapped, this._zipBuffer!);
+          // Передаём файлы, буфер и оригинальный File
+          this.onFilesLoaded(mapped, this._zipBuffer!, this._originalFile);
           this._zipBuffer = null;
+          this._originalFile = undefined;
         }, 400);
       } else if (type === 'progress') {
         // Прогресс от Worker (если поддерживается)
@@ -222,6 +226,9 @@ export class Uploader {
 
   /** Хранилище копии буфера ZIP для передачи во Viewer */
   private _zipBuffer: ArrayBuffer | null = null;
+
+  /** Хранилище оригинального File для Bridge */
+  private _originalFile: File | undefined = undefined;
 
   /**
    * Отображение прогресс-бара

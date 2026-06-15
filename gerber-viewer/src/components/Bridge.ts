@@ -2,131 +2,124 @@
  * Bridge — postMessage коммуникация с родительским окном (WordPress)
  *
  * Обеспечивает:
- * - Двустороннюю связь через window.postMessage
- * - Обработку команд от родительского окна
- * - Отправку событий (ready, metrics, error, resize)
+ * - Отправку данных в родительское окно через window.postMessage
+ * - Кнопку "Рассчитать стоимость", которая собирает метрики из Viewer
+ *   и оригинальный zipFile из Uploader, затем отправляет postMessage
+ *
+ * Использование:
+ *   const bridge = new Bridge(container);
+ *   bridge.render();
+ *   bridge.setViewer(viewer);
+ *   bridge.setZipFile(zipFile);
+ *   bridge.destroy();
  */
 
-import type { PostMessagePayload, ViewerConfig } from '../types';
+import type { ProjectMetrics } from '../types';
 
-/** Обработчик команд от родительского окна */
-export type CommandHandler = (command: string, data: Record<string, unknown>) => void;
+/** Данные для отправки в родительское окно (WordPress) */
+export interface GerberDataPayload {
+  zipFile: File;
+  length: number;
+  width: number;
+  layersCount: number;
+  minDrill: number;
+}
 
 export class Bridge {
-  private origin: string;
-  private onCommand: CommandHandler;
+  private el: HTMLElement | null = null;
+  private container: HTMLElement;
+  private btn: HTMLElement | null = null;
+  private getMetrics: (() => ProjectMetrics) | null = null;
+  private zipFile: File | null = null;
 
-  /**
-   * @param allowedOrigin — разрешённый origin родительского окна ('*' для разработки)
-   * @param onCommand — обработчик входящих команд
-   */
-  constructor(allowedOrigin: string = '*', onCommand: CommandHandler) {
-    this.origin = allowedOrigin;
-    this.onCommand = onCommand;
-    this.setupListener();
+  constructor(container: HTMLElement) {
+    this.container = container;
   }
 
   /**
-   * Настройка слушателя postMessage
+   * Создаёт DOM-структуру панели Bridge
    */
-  private setupListener(): void {
-    window.addEventListener('message', (event: MessageEvent) => {
-      // Проверка origin (если не '*')
-      if (this.origin !== '*' && event.origin !== this.origin) {
-        return;
-      }
+  public render(): void {
+    this.el = this.container;
+    this.el.classList.add('bridge-panel');
 
-      const payload = event.data as { type?: string; command?: string; data?: Record<string, unknown> };
+    this.el.innerHTML = `
+      <h3>Калькулятор стоимости</h3>
+      <button class="btn btn-primary bridge-btn" id="calculateBtn" type="button" disabled>
+        Рассчитать стоимость
+      </button>
+    `;
 
-      if (payload?.command) {
-        this.onCommand(payload.command, payload.data ?? {});
-      }
+    this.btn = this.el.querySelector('#calculateBtn');
+    this.btn?.addEventListener('click', () => {
+      this.sendData();
     });
   }
 
   /**
-   * Отправка сообщения в родительское окно
+   * Устанавливает функцию получения метрик из Viewer
    */
-  public send(payload: PostMessagePayload): void {
-    if (window.parent === window) {
-      // Не в iframe — ничего не делаем
+  public setViewer(getMetricsFn: () => ProjectMetrics): void {
+    this.getMetrics = getMetricsFn;
+  }
+
+  /**
+   * Устанавливает оригинальный zip-файл из Uploader
+   */
+  public setZipFile(file: File): void {
+    this.zipFile = file;
+  }
+
+  /**
+   * Активирует кнопку после успешной инициализации вьювера
+   */
+  public enable(): void {
+    if (this.btn) {
+      this.btn.removeAttribute('disabled');
+    }
+  }
+
+  /**
+   * Собирает данные и отправляет postMessage в родительское окно
+   */
+  public sendData(): void {
+    if (!this.getMetrics || !this.zipFile) {
+      console.warn('[Bridge] Метрики или zipFile не установлены');
       return;
     }
 
-    window.parent.postMessage(payload, this.origin);
-  }
+    const metrics = this.getMetrics();
 
-  /**
-   * Уведомление о готовности
-   */
-  public notifyReady(version: string = '1.0.0'): void {
-    this.send({
-      type: 'ready',
-      data: { version },
-    });
-  }
-
-  /**
-   * Отправка метрик
-   */
-  public sendMetrics(metrics: Record<string, unknown>): void {
-    this.send({
-      type: 'metrics',
-      data: metrics,
-    });
-  }
-
-  /**
-   * Отправка ошибки
-   */
-  public sendError(message: string, code?: string): void {
-    this.send({
-      type: 'error',
-      data: { message, code },
-    });
-  }
-
-  /**
-   * Отправка события экспорта
-   */
-  public sendExport(dataUrl: string): void {
-    this.send({
-      type: 'export',
-      data: { dataUrl },
-    });
-  }
-
-  /**
-   * Отправка изменения размера
-   */
-  public sendResize(width: number, height: number): void {
-    this.send({
-      type: 'resize',
-      data: { width, height },
-    });
-  }
-
-  /**
-   * Получение конфигурации из URL-параметров
-   */
-  public static getConfigFromUrl(): ViewerConfig {
-    const params = new URLSearchParams(window.location.search);
-    return {
-      theme: (params.get('theme') as 'light' | 'dark') ?? 'dark',
-      lang: (params.get('lang') as 'ru' | 'en') ?? 'ru',
-      maxFileSize: params.get('maxSize')
-        ? parseInt(params.get('maxSize')!, 10)
-        : 50 * 1024 * 1024,
-      showToolbar: params.get('toolbar') !== '0',
+    const payload = {
+      type: 'GERBER_DATA',
+      payload: {
+        zipFile: this.zipFile,
+        length: metrics.length,
+        width: metrics.width,
+        layersCount: metrics.layersCount,
+        minDrill: metrics.minDrill,
+      },
     };
+
+    if (window.parent !== window) {
+      window.parent.postMessage(payload, '*');
+      console.log('[Bridge] Данные отправлены в родительское окно', payload);
+    } else {
+      console.warn('[Bridge] Приложение не в iframe, postMessage не отправлен');
+    }
   }
 
   /**
-   * Очистка
+   * Очистка DOM
    */
   public destroy(): void {
-    // Удалить конкретный listener нельзя без сохранения ссылки,
-    // поэтому перезаписываем: window.removeEventListener не вызываем,
-    // но помечаем как отключённый
+    if (this.el) {
+      this.el.innerHTML = '';
+      this.el.classList.remove('bridge-panel');
+    }
+    this.btn = null;
+    this.getMetrics = null;
+    this.zipFile = null;
+    this.el = null;
   }
 }
