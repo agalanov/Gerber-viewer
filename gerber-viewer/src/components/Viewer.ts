@@ -3,7 +3,7 @@
  *
  * Отвечает за:
  * - Распаковку ZIP и извлечение файлов по маппингу
- * - Инициализацию WebGL-контекста через createIntegratedViewer
+ * - Инициализацию WebGL-контекста через createBoardViewer
  * - Управление видимостью слоёв (панель чекбоксов)
  * - Переключение сторон Top/Bottom
  * - Масштабирование Fit
@@ -17,35 +17,48 @@ import JSZip from 'jszip';
 import { renderGerbersFiles, createBoardViewer } from 'gerbers-renderer';
 
 // ============================================================
-//  Локальные типы для gerbers-renderer
+//  Локальные типы для gerbers-renderer (реальные типы из библиотеки)
 // ============================================================
 
-/** Результат рендеринга Gerber-файлов */
+/** Результат рендеринга Gerber-файлов (из gerbers-renderer) */
 interface RenderResult {
-  boardGeom: BoardGeometry;
-  layers: Record<string, unknown>;
+  boardGeom: BoardGeom;
+  layers: ViewerLayers;
   revoke: () => void;
 }
 
-/** Геометрия платы */
-interface BoardGeometry {
-  board?: {
-    mm_bounds?: {
-      minX: number;
-      minY: number;
-      maxX: number;
-      maxY: number;
+/** Геометрия платы (из gerbers-renderer) */
+interface BoardGeom {
+  board: {
+    width_in: number;
+    height_in: number;
+    mm_bounds: {
+      min_x_mm: number;
+      min_y_mm: number;
+      max_x_mm: number;
+      max_y_mm: number;
     };
-  };
-  drills?: {
-    count?: number;
-    minDiameter?: number;
   };
 }
 
-/** Интегрированный вьювер */
-interface IntegratedViewer {
-  setData: (result: RenderResult) => void;
+/** Слои платы (из gerbers-renderer) */
+interface ViewerLayers {
+  top_copper?: string;
+  bottom_copper?: string;
+  top_mask?: string;
+  bottom_mask?: string;
+  top_silk?: string;
+  bottom_silk?: string;
+  drills?: string;
+  vias?: string;
+  top_board_mask?: string;
+  bottom_board_mask?: string;
+  [key: string]: string | undefined;
+}
+
+/** BoardViewer API (из gerbers-renderer) */
+interface BoardViewer {
+  setData: (data: { boardGeom: BoardGeom; layers: ViewerLayers }) => void;
   setSideMode: (side: 'top' | 'bottom') => void;
   fit: () => void;
   dispose: () => void;
@@ -66,7 +79,7 @@ export class Viewer {
   private el: HTMLElement;
   private container: HTMLElement | null = null;
   private layersListEl: HTMLElement | null = null;
-  private viewer: IntegratedViewer | null = null;
+  private viewer: BoardViewer | null = null;
   private result: RenderResult | null = null;
   private currentSide: 'top' | 'bottom' = 'top';
   private btnTop: HTMLElement | null = null;
@@ -149,13 +162,22 @@ export class Viewer {
     }
 
     // 3. Рендеринг через gerbers-renderer
-    this.result = await renderGerbersFiles(files);
+    console.log('[Viewer] Rendering files:', Object.keys(files));
+    const renderResult = await renderGerbersFiles(files);
+    this.result = renderResult;
+    console.log('[Viewer] Render result:', {
+      boardGeom: renderResult.boardGeom,
+      layerKeys: Object.keys(renderResult.layers),
+    });
 
     // 4. Создание вьювера
     this.viewer = createBoardViewer(this.container, {});
 
-    // 5. Передача данных
-    this.viewer!.setData(this.result!);
+    // 5. Передача данных (ВАЖНО: передаём объект { boardGeom, layers }, а не весь result)
+    this.viewer!.setData({
+      boardGeom: renderResult.boardGeom,
+      layers: renderResult.layers,
+    });
 
     // 6. Fit
     this.viewer!.fit();
@@ -210,12 +232,14 @@ export class Viewer {
 
   /**
    * Установка видимости слоя
+   * Примечание: библиотека gerbers-renderer v0.1.0 не предоставляет
+   * per-layer visibility через BoardViewer API. Чекбоксы работают
+   * только как UI-индикаторы. Полноценное управление видимостью
+   * будет добавлено в следующих версиях.
    */
   private setLayerVisibility(layerName: string, visible: boolean): void {
     if (!this.viewer) return;
-    if (typeof (this.viewer as any).setLayerVisibility === 'function') {
-      (this.viewer as any).setLayerVisibility(layerName, visible);
-    }
+    console.log(`[Viewer] Layer visibility: ${layerName} = ${visible} (UI only)`);
   }
 
   // ============================================================
@@ -271,21 +295,16 @@ export class Viewer {
     const boardGeom = this.result.boardGeom;
     if (boardGeom?.board?.mm_bounds) {
       const bounds = boardGeom.board.mm_bounds;
-      metrics.width = Math.round((bounds.maxX - bounds.minX) * 100) / 100;
-      metrics.length = Math.round((bounds.maxY - bounds.minY) * 100) / 100;
+      metrics.width = Math.round((bounds.max_x_mm - bounds.min_x_mm) * 100) / 100;
+      metrics.length = Math.round((bounds.max_y_mm - bounds.min_y_mm) * 100) / 100;
     }
 
     // Количество слоёв
     metrics.layersCount = Object.keys(this.result.layers).length;
 
-    // Drill-статистика
-    if (boardGeom?.drills) {
-      const drills = boardGeom.drills;
-      metrics.holesCount = drills.count ?? 0;
-      metrics.minDrill = drills.minDiameter
-        ? Math.round(drills.minDiameter * 1000) / 1000
-        : 0;
-    }
+    // Drill-статистика — библиотека не предоставляет её через BoardGeom,
+    // поэтому holesCount и minDrill остаются 0 (можно добавить позже через парсинг Excellon)
+    console.log('[Viewer] Metrics:', metrics);
 
     return metrics;
   }
