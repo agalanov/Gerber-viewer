@@ -1,0 +1,775 @@
+/* ============================================================
+   Gerber Viewer — Базовые стили
+   ============================================================ */
+
+/* --- CSS-переменные (цветовая схема) --- */
+:root {
+  /* Основные цвета */
+  --gv-bg-primary: #1a1a2e;
+  --gv-bg-secondary: #16213e;
+  --gv-bg-surface: #0f3460;
+  --gv-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Текст */
+  --gv-text-primary: #e0e0e0;
+  --gv-text-secondary: #a0a0b0;
+  --gv-text-muted: #6c6c80;
+
+  /* Акценты */
+  --gv-accent: #4fc3f7;
+  --gv-accent-hover: #29b6f6;
+  --gv-success: #66bb6a;
+  --gv-warning: #ffa726;
+  --gv-error: #ef5350;
+
+  /* Слои */
+  --gv-layer-copper: #c97d2d;
+  --gv-layer-soldermask: #2e7d32;
+  --gv-layer-silkscreen: #f5f5f5;
+  --gv-layer-paste: #78909c;
+  --gv-layer-drill: #1a237e;
+  --gv-layer-outline: #ffd54f;
+
+  /* Размеры */
+  --gv-header-height: 48px;
+  --gv-sidebar-width: 320px;
+  --gv-border-radius: 6px;
+  --gv-spacing-xs: 4px;
+  --gv-spacing-sm: 8px;
+  --gv-spacing-md: 16px;
+  --gv-spacing-lg: 24px;
+  --gv-spacing-xl: 32px;
+
+  /* Шрифты */
+  --gv-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Oxygen, Ubuntu, sans-serif;
+  --gv-font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
+  --gv-font-size-sm: 12px;
+  --gv-font-size-md: 14px;
+  --gv-font-size-lg: 16px;
+
+  /* Тени */
+  --gv-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --gv-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --gv-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Анимации */
+  --gv-transition-fast: 150ms ease;
+  --gv-transition-normal: 250ms ease;
+}
+
+/* --- Сброс и база --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--gv-font-family);
+  font-size: var(--gv-font-size-md);
+  color: var(--gv-text-primary);
+  background-color: var(--gv-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Контейнер загрузки --- */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--gv-text-secondary);
+  font-size: var(--gv-font-size-lg);
+}
+
+/* --- Контейнер вьювера --- */
+.viewer-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--gv-bg-primary);
+}
+
+.viewer-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Панели --- */
+.panel {
+  background-color: var(--gv-bg-secondary);
+  border-radius: var(--gv-border-radius);
+  box-shadow: var(--gv-shadow-sm);
+  padding: var(--gv-spacing-md);
+}
+
+.panel-header {
+  font-size: var(--gv-font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gv-text-secondary);
+  margin-bottom: var(--gv-spacing-sm);
+  padding-bottom: var(--gv-spacing-sm);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* --- Скроллбар --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* --- Кнопки --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gv-spacing-xs);
+  padding: var(--gv-spacing-sm) var(--gv-spacing-md);
+  font-size: var(--gv-font-size-md);
+  font-family: var(--gv-font-family);
+  border: none;
+  border-radius: var(--gv-border-radius);
+  cursor: pointer;
+  transition: background-color var(--gv-transition-fast),
+    opacity var(--gv-transition-fast);
+  user-select: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--gv-accent);
+  color: #000;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--gv-accent-hover);
+}
+
+.btn-secondary {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--gv-text-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* --- Адаптивность --- */
+@media (max-width: 768px) {
+  :root {
+    --gv-sidebar-width: 280px;
+    --gv-header-height: 40px;
+  }
+
+  .panel {
+    padding: var(--gv-spacing-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --gv-sidebar-width: 100%;
+  }
+}
+
+/* ============================================================
+   Layout — Header + Sidebar + Main
+   ============================================================ */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  height: var(--gv-header-height);
+  padding: 0 var(--gv-spacing-md);
+  background-color: var(--gv-bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: var(--gv-font-size-lg);
+  font-weight: 600;
+  color: var(--gv-text-primary);
+  margin: 0;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  width: var(--gv-sidebar-width);
+  min-width: var(--gv-sidebar-width);
+  background-color: var(--gv-bg-secondary);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  padding: var(--gv-spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gv-spacing-md);
+}
+
+.app-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   Uploader — Drag & Drop зона загрузки
+   ============================================================ */
+
+#uploader {
+  width: 100%;
+}
+
+.uploader-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gv-spacing-sm);
+  padding: var(--gv-spacing-xl) var(--gv-spacing-md);
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--gv-border-radius);
+  background-color: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: border-color var(--gv-transition-fast),
+    background-color var(--gv-transition-fast);
+  text-align: center;
+  user-select: none;
+}
+
+.uploader-dropzone:hover {
+  border-color: var(--gv-accent);
+  background-color: rgba(79, 195, 247, 0.05);
+}
+
+.uploader-dropzone--active {
+  border-color: var(--gv-accent);
+  background-color: rgba(79, 195, 247, 0.12);
+  border-style: solid;
+}
+
+.uploader-icon {
+  font-size: 36px;
+  line-height: 1;
+  margin-bottom: var(--gv-spacing-xs);
+}
+
+.uploader-dropzone p {
+  color: var(--gv-text-secondary);
+  font-size: var(--gv-font-size-sm);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.uploader-or {
+  color: var(--gv-text-muted) !important;
+  font-size: var(--gv-font-size-sm);
+}
+
+.uploader-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gv-spacing-sm) var(--gv-spacing-lg);
+  font-size: var(--gv-font-size-md);
+  font-family: var(--gv-font-family);
+  background-color: var(--gv-accent);
+  color: #000;
+  border: none;
+  border-radius: var(--gv-border-radius);
+  cursor: pointer;
+  transition: background-color var(--gv-transition-fast);
+  font-weight: 500;
+}
+
+.uploader-button:hover {
+  background-color: var(--gv-accent-hover);
+}
+
+/* --- Прогресс-бар --- */
+
+.uploader-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gv-spacing-sm);
+  padding: var(--gv-spacing-lg) var(--gv-spacing-md);
+}
+
+.uploader-progress-bar {
+  width: 0%;
+  height: 6px;
+  background-color: var(--gv-accent);
+  border-radius: 3px;
+  transition: width var(--gv-transition-normal);
+  align-self: stretch;
+}
+
+.uploader-progress span {
+  color: var(--gv-text-secondary);
+  font-size: var(--gv-font-size-sm);
+}
+
+/* ============================================================
+   Mapper — Таблица маппинга слоёв
+   ============================================================ */
+
+#mapper {
+  width: 100%;
+}
+
+.mapper-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gv-spacing-sm);
+  gap: var(--gv-spacing-sm);
+}
+
+.mapper-toolbar h3 {
+  font-size: var(--gv-font-size-md);
+  font-weight: 600;
+  color: var(--gv-text-primary);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.mapper-apply {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gv-spacing-xs) var(--gv-spacing-md);
+  font-size: var(--gv-font-size-sm);
+  font-family: var(--gv-font-family);
+  background-color: var(--gv-success);
+  color: #000;
+  border: none;
+  border-radius: var(--gv-border-radius);
+  cursor: pointer;
+  transition: background-color var(--gv-transition-fast);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mapper-apply:hover {
+  filter: brightness(1.1);
+}
+
+/* --- Блок предупреждений --- */
+
+.mapper-warnings {
+  margin-bottom: var(--gv-spacing-sm);
+}
+
+.mapper-warning-item {
+  padding: var(--gv-spacing-xs) var(--gv-spacing-sm);
+  font-size: var(--gv-font-size-sm);
+  color: var(--gv-warning);
+  background-color: rgba(255, 167, 38, 0.1);
+  border-radius: var(--gv-border-radius);
+  margin-bottom: var(--gv-spacing-xs);
+  line-height: 1.4;
+}
+
+/* --- Таблица --- */
+
+.mapper-table-wrapper {
+  overflow-x: auto;
+}
+
+.mapper-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--gv-font-size-sm);
+}
+
+.mapper-table thead th {
+  text-align: left;
+  padding: var(--gv-spacing-xs) var(--gv-spacing-sm);
+  color: var(--gv-text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.mapper-table tbody td {
+  padding: var(--gv-spacing-xs) var(--gv-spacing-sm);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+/* --- Строки таблицы --- */
+
+.mapper-row {
+  transition: background-color var(--gv-transition-fast);
+}
+
+.mapper-row:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.mapper-row--ok {
+  border-left: 3px solid var(--gv-success);
+}
+
+.mapper-row--warning {
+  border-left: 3px solid var(--gv-warning);
+  background-color: rgba(255, 167, 38, 0.05);
+}
+
+.mapper-row--error {
+  border-left: 3px solid var(--gv-error);
+  background-color: rgba(239, 83, 80, 0.08);
+}
+
+/* --- Drag & Drop --- */
+
+.mapper-row--dragging {
+  opacity: 0.4;
+}
+
+.mapper-row--drag-over {
+  border-top: 2px solid var(--gv-accent);
+}
+
+.mapper-drag-handle {
+  cursor: grab;
+  color: var(--gv-text-muted);
+  margin-right: var(--gv-spacing-xs);
+  font-size: 14px;
+  user-select: none;
+}
+
+.mapper-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* --- Ячейки --- */
+
+.mapper-file-name {
+  display: flex;
+  align-items: center;
+  color: var(--gv-text-primary);
+  word-break: break-all;
+  max-width: 160px;
+}
+
+.mapper-select {
+  width: 100%;
+  padding: 2px 4px;
+  font-size: var(--gv-font-size-sm);
+  font-family: var(--gv-font-family);
+  background-color: var(--gv-bg-primary);
+  color: var(--gv-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--gv-transition-fast);
+}
+
+.mapper-select:hover,
+.mapper-select:focus {
+  border-color: var(--gv-accent);
+}
+
+.mapper-status-cell {
+  text-align: center;
+}
+
+.mapper-status {
+  font-size: var(--gv-font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Viewer Placeholder — заглушка после применения маппинга
+   ============================================================ */
+
+.viewer-ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gv-spacing-md);
+  text-align: center;
+  padding: var(--gv-spacing-xl);
+}
+
+.viewer-ready-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.viewer-ready h2 {
+  font-size: var(--gv-font-size-lg);
+  font-weight: 600;
+  color: var(--gv-text-primary);
+  margin: 0;
+}
+
+.viewer-ready p {
+  color: var(--gv-text-secondary);
+  font-size: var(--gv-font-size-md);
+  margin: 0;
+}
+
+.viewer-ready-hint {
+  color: var(--gv-text-muted) !important;
+  font-size: var(--gv-font-size-sm) !important;
+}
+
+/* ============================================================
+   Viewer — WebGL-рендеринг
+   ============================================================ */
+
+.viewer-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--gv-bg-primary);
+}
+
+/* --- Тулбар --- */
+
+.viewer-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gv-spacing-sm);
+  padding: var(--gv-spacing-sm);
+  background-color: var(--gv-bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* --- Панель слоёв --- */
+
+.viewer-layers {
+  flex: 1;
+  min-width: 0;
+}
+
+.viewer-layers-title {
+  font-size: var(--gv-font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gv-text-secondary);
+  margin: 0 0 var(--gv-spacing-xs) 0;
+}
+
+.viewer-layers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gv-spacing-xs);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.viewer-layer-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gv-spacing-xs);
+  padding: 2px 8px;
+  font-size: var(--gv-font-size-sm);
+  color: var(--gv-text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--gv-transition-fast);
+  white-space: nowrap;
+}
+
+.viewer-layer-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.viewer-layer-checkbox {
+  cursor: pointer;
+  accent-color: var(--gv-accent);
+}
+
+.viewer-layer-color {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.viewer-layer-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+/* --- Кнопки управления --- */
+
+.viewer-controls {
+  display: flex;
+  gap: var(--gv-spacing-xs);
+  flex-shrink: 0;
+}
+
+.viewer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  font-size: var(--gv-font-size-sm);
+  font-family: var(--gv-font-family);
+  font-weight: 500;
+  color: var(--gv-text-secondary);
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color var(--gv-transition-fast),
+    color var(--gv-transition-fast),
+    border-color var(--gv-transition-fast);
+  user-select: none;
+}
+
+.viewer-btn:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: var(--gv-text-primary);
+}
+
+.viewer-btn--active {
+  background-color: var(--gv-accent);
+  color: #000;
+  border-color: var(--gv-accent);
+}
+
+.viewer-btn--active:hover {
+  background-color: var(--gv-accent-hover);
+  color: #000;
+}
+
+.viewer-btn--fit {
+  min-width: 48px;
+}
+
+/* --- Canvas-контейнер --- */
+
+.viewer-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.viewer-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================================
+   Summary — Сводка проекта
+   ============================================================ */
+
+.summary-panel {
+  width: 100%;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gv-spacing-sm);
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--gv-spacing-xs) var(--gv-spacing-sm);
+  background-color: rgba(255, 255, 255, 0.03);
+  border-radius: var(--gv-border-radius);
+}
+
+.summary-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gv-text-muted);
+}
+
+.summary-value {
+  font-size: var(--gv-font-size-lg);
+  font-weight: 600;
+  color: var(--gv-text-primary);
+  font-family: var(--gv-font-mono);
+}
+
+.summary-empty {
+  color: var(--gv-text-muted);
+  font-size: var(--gv-font-size-sm);
+  text-align: center;
+  padding: var(--gv-spacing-md) 0;
+}
+
+/* ============================================================
+   Export — Экспорт PNG
+   ============================================================ */
+
+.export-panel {
+  width: 100%;
+}
+
+.export-btn {
+  width: 100%;
+}
